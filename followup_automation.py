@@ -89,7 +89,7 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapi
 creds = Credentials.from_service_account_file("/etc/secrets/google-credentials.json", scopes=SCOPES)
 sheets_api = build("sheets", "v4", credentials=creds)
 gc = gspread.authorize(creds)
-sheet = gc.open("Expo-Sales-Management").worksheet("speakers-1")
+sheet = gc.open("Expo-Sales-Management").worksheet("speakers-2")
 spreadsheet_id = sheet.spreadsheet.id
 
 # === Utilities ===
