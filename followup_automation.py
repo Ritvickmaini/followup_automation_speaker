@@ -266,6 +266,11 @@ def get_reply_emails():
 # === Main Functions ===
 def process_speakers_emails():
     print("📤 Processing new speaker emails...")
+    expected_headers = [
+        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
+        "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
+        "Next Followup", "Mobile", "Email", "Show"
+    ]
     rows = sheet.get_all_records()
     row_colors = get_row_colors(2, len(rows) + 1)
     updates = []
@@ -296,6 +301,11 @@ def process_speakers_emails():
 def process_speaker_replies():
     print("📥 Checking speaker replies...")
     replied_emails = get_reply_emails()
+    expected_headers = [
+        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
+        "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
+        "Next Followup", "Mobile", "Email", "Show"
+    ]
     rows = sheet.get_all_records()
     row_colors = get_row_colors(2, len(rows) + 1)
     updates = []
