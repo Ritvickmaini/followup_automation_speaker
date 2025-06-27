@@ -318,11 +318,12 @@ def process_speaker_replies():
 
 # === Run Loop ===
 if __name__ == "__main__":
-    print("🚀 Speaker automation started.")
+    print("🚀 Speaker automation started.", flush=True)
     next_send_time = time.time()
 
     while True:
         try:
+            print("🔁 Loop running at", datetime.now(), flush=True)
             process_speaker_replies()
             if time.time() >= next_send_time:
                 process_speakers_emails()
