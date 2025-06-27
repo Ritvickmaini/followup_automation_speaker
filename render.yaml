@@ -1,0 +1,17 @@
+services:
+  - type: worker
+    name: speaker-followup-automation
+    runtime: python
+    repo: https://github.com/YOUR_USERNAME/YOUR_REPO_NAME
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: python followup_automation.py
+    envVars:
+      - key: SMTP_EMAIL
+        value: speakersengagement@b2bgrowthexpo.com
+      - key: SMTP_PASSWORD
+        value: your-secure-password
+    secretFiles:
+      - path: /etc/secrets/google-credentials.json
+        envVarName: GOOGLE_APPLICATION_CREDENTIALS
+        fileName: google-credentials.json
