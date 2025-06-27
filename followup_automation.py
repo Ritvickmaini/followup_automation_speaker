@@ -219,13 +219,23 @@ def send_email(to_email, subject, body_html):
     msg.attach(MIMEText(body_html, "html"))
 
     try:
+        # Send email
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-        print(f"✅ Email sent to {to_email}")
+
+        print(f"✅ Email sent to {to_email}", flush=True)
+
+        # Save to Sent folder
+        with imaplib.IMAP4(IMAP_SERVER, IMAP_PORT) as imap:
+            imap.login(IMAP_EMAIL, IMAP_PASSWORD)
+            imap.append("INBOX.Sent", '', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+
+        print(f"📬 Saved to INBOX.Sent for {to_email}", flush=True)
+
     except Exception as e:
-        print(f"❌ SMTP send error: {e}")
+        print(f"❌ SMTP/IMAP error: {e}", flush=True)
 
 def get_reply_emails():
     replies = {}
