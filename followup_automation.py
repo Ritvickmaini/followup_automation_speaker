@@ -320,28 +320,37 @@ def get_reply_emails():
             mail.login(IMAP_EMAIL, IMAP_PASSWORD)
             mail.select("INBOX")
             typ, data = mail.search(None, 'UNSEEN')
+
             for num in data[0].split():
-                typ, msg_data = mail.fetch(num, '(RFC822)')
-                msg = email.message_from_bytes(msg_data[0][1])
-                from_email = email.utils.parseaddr(msg['From'])[1].lower()
+                try:
+                    typ, msg_data = mail.fetch(num, '(RFC822)')
+                    msg = email.message_from_bytes(msg_data[0][1])
+                    from_email = email.utils.parseaddr(msg['From'])[1].lower()
 
-                body = ""
-                for part in msg.walk():
-                    if part.get_content_type() == "text/plain":
-                        payload = part.get_payload(decode=True)
-                        if isinstance(payload, bytes):
-                            body = payload.decode(errors="ignore").strip()
-                        elif isinstance(payload, str):
-                            body = payload.strip()
-                        else:
-                            body = ""
-                        break
+                    body = ""
+                    for part in msg.walk():
+                        if part.get_content_type() == "text/plain":
+                            try:
+                                payload = part.get_payload(decode=True)
+                                if isinstance(payload, bytes):
+                                    body = payload.decode(errors="ignore").strip()
+                                elif isinstance(payload, str):
+                                    body = payload.strip()
+                                else:
+                                    body = str(payload).strip()
+                            except Exception as decode_err:
+                                print(f"⚠️ Failed to decode email from {from_email}: {decode_err}")
+                                body = ""
+                            break
 
-                replies[from_email] = body
+                    replies[from_email] = body
+
+                except Exception as fetch_err:
+                    print(f"⚠️ Failed to process message {num}: {fetch_err}")
+
     except Exception as e:
         print(f"❌ IMAP fetch error: {e}")
     return replies
-
 # === Main Functions ===
 def process_speakers_emails():
     print("📤 Processing new speaker emails...")
@@ -396,7 +405,8 @@ def process_speaker_replies():
             if row.get("Reply Status") == "Replied":
                 continue
             if email_addr in replied_emails:
-                updates.append({"range": f"{sheet_name}!F{i}", "values": [["Replied"]]})
+                reply_col = "F" if sheet_name == "speakers-2" else "G"
+                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
                 color_row_for_sheet(local_sheet, i, "#FFFF00")
                 comment = replied_emails[email_addr]
                 add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)  # C = First Name
