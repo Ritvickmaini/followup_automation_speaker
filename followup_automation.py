@@ -210,6 +210,82 @@ def add_comment_to_cell(row_idx, col_idx, comment_text):
         sheets_api.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=note_request).execute()
     except Exception as e:
         print(f"❌ Failed to add comment: {e}")
+      
+def get_row_colors_for_sheet(sheet_obj, start=2, end=1000):
+    try:
+        range_ = f"{sheet_obj.title}!A{start}:A{end}"
+        result = sheets_api.spreadsheets().get(
+            spreadsheetId=sheet_obj.spreadsheet.id,
+            ranges=[range_],
+            fields="sheets.data.rowData.values.effectiveFormat.backgroundColor"
+        ).execute()
+        rows = result['sheets'][0]['data'][0]['rowData']
+        colors = []
+        for row in rows:
+            color = row['values'][0].get('effectiveFormat', {}).get('backgroundColor', {})
+            rgb = (
+                int(color.get('red', 0) * 255),
+                int(color.get('green', 0) * 255),
+                int(color.get('blue', 0) * 255)
+            )
+            colors.append(rgb)
+        return colors
+    except Exception as e:
+        print(f"❌ Failed to get row colors for {sheet_obj.title}: {e}")
+        return []
+
+def color_row_for_sheet(sheet_obj, row_idx, color_hex):
+    rgb = hex_to_rgb(color_hex)
+    request = {
+        "requests": [{
+            "repeatCell": {
+                "range": {
+                    "sheetId": sheet_obj._properties['sheetId'],
+                    "startRowIndex": row_idx - 1,
+                    "endRowIndex": row_idx
+                },
+                "cell": {
+                    "userEnteredFormat": {
+                        "backgroundColor": rgb
+                    }
+                },
+                "fields": "userEnteredFormat.backgroundColor"
+            }
+        }]
+    }
+    sheets_api.spreadsheets().batchUpdate(spreadsheetId=sheet_obj.spreadsheet.id, body=request).execute()
+
+def add_comment_to_cell_for_sheet(sheet_obj, row_idx, col_idx, comment_text):
+    try:
+        note_request = {
+            "requests": [
+                {
+                    "updateCells": {
+                        "rows": [
+                            {
+                                "values": [
+                                    {
+                                        "note": comment_text
+                                    }
+                                ]
+                            }
+                        ],
+                        "fields": "note",
+                        "range": {
+                            "sheetId": sheet_obj._properties['sheetId'],
+                            "startRowIndex": row_idx - 1,
+                            "endRowIndex": row_idx,
+                            "startColumnIndex": col_idx,
+                            "endColumnIndex": col_idx + 1
+                        }
+                    }
+                }
+            ]
+        }
+        sheets_api.spreadsheets().batchUpdate(spreadsheetId=sheet_obj.spreadsheet.id, body=note_request).execute()
+    except Exception as e:
+        print(f"❌ Failed to add comment in {sheet_obj.title}: {e}")
+
 
 def send_email(to_email, subject, body_html):
     msg = MIMEMultipart("alternative")
@@ -301,30 +377,33 @@ def process_speakers_emails():
 def process_speaker_replies():
     print("📥 Checking speaker replies...")
     replied_emails = get_reply_emails()
-    expected_headers = [
-        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
-        "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
-        "Next Followup", "Mobile", "Email", "Show"
-    ]
-    rows = sheet.get_all_records()
-    row_colors = get_row_colors(2, len(rows) + 1)
-    updates = []
 
-    for i, row in enumerate(rows, start=2):
-        rgb = row_colors[i - 2]
-        if rgb != (255, 255, 255):
-            continue
-        email_addr = row.get("Email", "").strip().lower()
-        if row.get("Reply Status") == "Replied":
-            continue
-        if email_addr in replied_emails:
-            updates.append({"range": f"{sheet.title}!F{i}", "values": [["Replied"]]})  # Column F
-            color_row(i, "#FFFF00")
-            comment = replied_emails[email_addr]
-            add_comment_to_cell(i, 2, comment)  # Column C = First Name
+    def process_sheet(sheet_name):
+        print(f"🔍 Processing replies for sheet: {sheet_name}")
+        local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
+        rows = local_sheet.get_all_records()
+        row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
+        updates = []
 
-    if updates:
-        batch_update_cells(updates)
+        for i, row in enumerate(rows, start=2):
+            rgb = row_colors[i - 2]
+            if rgb != (255, 255, 255):
+                continue
+            email_addr = row.get("Email", "").strip().lower()
+            if row.get("Reply Status") == "Replied":
+                continue
+            if email_addr in replied_emails:
+                updates.append({"range": f"{sheet_name}!F{i}", "values": [["Replied"]]})
+                color_row_for_sheet(local_sheet, i, "#FFFF00")
+                comment = replied_emails[email_addr]
+                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)  # C = First Name
+
+        if updates:
+            batch_update_cells(updates)
+
+    # Process both sheets
+    process_sheet("speakers-2")
+    process_sheet("OB-speakers")
 
 # === Run Loop ===
 if __name__ == "__main__":
