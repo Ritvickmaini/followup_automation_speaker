@@ -328,9 +328,12 @@ def get_reply_emails():
                 body = ""
                 for part in msg.walk():
                     if part.get_content_type() == "text/plain":
-                        try:
-                            body = part.get_payload(decode=True).decode(errors="ignore").strip()
-                        except:
+                        payload = part.get_payload(decode=True)
+                        if isinstance(payload, bytes):
+                            body = payload.decode(errors="ignore").strip()
+                        elif isinstance(payload, str):
+                            body = payload.strip()
+                        else:
                             body = ""
                         break
 
