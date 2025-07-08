@@ -391,28 +391,31 @@ def process_speaker_replies():
     replied_emails = get_reply_emails()
 
     def process_sheet(sheet_name):
-        print(f"🔍 Processing replies for sheet: {sheet_name}")
-        local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
-        rows = local_sheet.get_all_records()
-        row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
-        updates = []
+    print(f"🔍 Processing replies for sheet: {sheet_name}")
+    local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
+    rows = local_sheet.get_all_records()
+    row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
+    updates = []
 
-        for i, row in enumerate(rows, start=2):
-            rgb = row_colors[i - 2]
-            if rgb != (255, 255, 255):
-                continue
-            email_addr = row.get("Email", "").strip().lower()
-            if row.get("Reply Status") == "Replied":
-                continue
-            if email_addr in replied_emails:
-                reply_col = "F" if sheet_name == "speakers-2" else "G"
-                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
-                color_row_for_sheet(local_sheet, i, "#FFFF00")
-                comment = replied_emails[email_addr]
-                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)  # C = First Name
+    for i, row in enumerate(rows, start=2):
+        email_addr = row.get("Email", "").strip().lower()
+        if not email_addr or row.get("Reply Status") == "Replied":
+            continue
 
-        if updates:
-            batch_update_cells(updates)
+        if email_addr in replied_emails:
+            # ✅ Always mark reply, even if colored
+            reply_col = "F" if sheet_name == "speakers-2" else "G"
+            updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+            
+            # ✅ Change row color to yellow
+            color_row_for_sheet(local_sheet, i, "#FFFF00")
+            
+            # ✅ Add reply comment to First_Name column (index 2)
+            comment = replied_emails[email_addr]
+            add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+
+    if updates:
+        batch_update_cells(updates)
 
     # Process both sheets
     process_sheet("speakers-2")
