@@ -385,37 +385,89 @@ def process_speakers_emails():
 
     if updates:
         batch_update_cells(updates)
+HTML_SIGNATURE = """
+<p>If you would like to schedule a meeting with me,<br>
+please use the link below:<br>
+<a href="https://tidycal.com/nagendra/b2b-discovery-call" target="_blank">https://tidycal.com/nagendra/b2b-discovery-call</a></p>
+<p style="margin-top: 30px;">
+Thanks & Regards,<br>
+<strong>Nagendra Mishra</strong><br>
+Director | B2B Growth Hub<br>
+Mo: +44 7913 027482<br>
+Email: <a href="mailto:nagendra@b2bgrowthexpo.com">nagendra@b2bgrowthexpo.com</a><br>
+<a href="https://www.b2bgrowthexpo.com" target="_blank">www.b2bgrowthexpo.com</a>
+</p>
+<p style="font-size: 13px; color: #888;">
+If you don’t want to hear from me again, please let me know.
+</p>
+"""
 
-def process_speaker_replies():
-    print("📥 Checking speaker replies...")
-    replied_emails = get_reply_emails()
+FOLLOWUP_BODIES = [
+    """<p>Thank you for submitting your interest to participate as a Speaker at the <strong>{show}</strong> B2B Growth Expo.</p>
+    <p>To proceed with your application, we request you to register using the URL below:<br>
+    <a href="https://b2bgrowthexpo.com/speakers-registration/">https://b2bgrowthexpo.com/speakers-registration/</a></p>
+    <p>Please confirm once you have registered, and feel free to ask if you need any clarification.</p>""",
 
-    def process_sheet(sheet_name):
-        print(f"🔍 Processing replies for sheet: {sheet_name}")
-        local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
-        rows = local_sheet.get_all_records()
-        row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
-        updates = []
+    """<p>Dear {name},</p>
+    <p>This is to follow up on your registration for the Speaking opportunity.<br>
+    Did you manage to register? If not, do you need any more information?</p>""",
 
-        for i, row in enumerate(rows, start=2):
-            email_addr = row.get("Email", "").strip().lower()
-            if not email_addr or row.get("Reply Status") == "Replied":
-                continue
+    """<p>Dear {name},</p>
+    <p>I understand that sometimes, interest is expressed out of curiosity; however, it is not a burning desire.</p>
+    <p>If that is the case with you, then we can understand why you still haven't registered.</p>
+    <p>I do not want to flood your inbox with unnecessary messages. Can you please confirm if you are still looking to pursue this?</p>""",
 
-            if email_addr in replied_emails:
-                # ✅ Always mark reply, even if colored
-                reply_col = "F" if sheet_name == "speakers-2" else "G"
-                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+    """<p>Dear {name},</p>
+    <p>Without sounding too rude, we are eager to onboard you, but given the very time-sensitive nature of the business, we do not want to waste our time on unnecessary follow-ups.</p>
+    <p>I request you to kindly save my time and respond in a simple YES / NO to cut to the chase.</p>"""
+]
 
-                # ✅ Change row color to yellow
-                color_row_for_sheet(local_sheet, i, "#FFFF00")
+def process_speakers_emails():
+    print("📤 Processing speaker follow-ups...")
+    rows = sheet.get_all_records()
+    row_colors = get_row_colors(2, len(rows) + 1)
+    updates = []
+    now = datetime.now()
+    today_str = now.strftime("%d-%m-%Y")
 
-                # ✅ Add reply comment to First_Name column (index 2)
-                comment = replied_emails[email_addr]
-                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+    for i, row in enumerate(rows, start=2):  # Sheet rows start from index 2
+        rgb = row_colors[i - 2]
+        email_addr = row.get("Email", "").strip()
+        name = row.get("First_Name", "").strip()
+        show = row.get("Show", "").strip()
+        reply_status = row.get("Reply Status", "").strip()
+        last_followup_date = row.get("Last-Followup-Date", "").strip()
+        followup_count = int(row.get("Followup-Count", "0") or "0")
 
-        if updates:
-            batch_update_cells(updates)
+        if not email_addr or reply_status == "Replied":
+            continue
+
+        send_email_flag = False
+
+        if followup_count == 0 and not last_followup_date:
+            send_email_flag = True
+        elif last_followup_date:
+            try:
+                last_dt = datetime.strptime(last_followup_date, "%d-%m-%Y")
+                if (now - last_dt).total_seconds() >= 86400:
+                    send_email_flag = True
+            except Exception as e:
+                print(f"⚠️ Date parse error at row {i}: {e}")
+
+        if send_email_flag:
+            if followup_count < 4:
+                email_body = FOLLOWUP_BODIES[followup_count].format(name=name, show=show) + HTML_SIGNATURE
+                send_email(email_addr, "Follow-up: Speaking Opportunity at B2B Growth Expo", email_body)
+
+                updates.append({"range": f"{sheet.title}!F{i}", "values": [[today_str]]})  # Last-Followup-Date
+                updates.append({"range": f"{sheet.title}!E{i}", "values": [[followup_count + 1]]})  # Followup-Count
+            else:
+                updates.append({"range": f"{sheet.title}!G{i}", "values": [["No Reply After 4 Followups"]]})  # Reply Status
+                color_row(i, "#FF0000")
+
+    if updates:
+        batch_update_cells(updates)
+
 
     # Process both sheets
     process_sheet("speakers-2")
