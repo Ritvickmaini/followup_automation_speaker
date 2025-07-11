@@ -352,39 +352,7 @@ def get_reply_emails():
         print(f"❌ IMAP fetch error: {e}")
     return replies
 # === Main Functions ===
-def process_speakers_emails():
-    print("📤 Processing new speaker emails...")
-    expected_headers = [
-        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
-        "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
-        "Next Followup", "Mobile", "Email", "Show"
-    ]
-    rows = sheet.get_all_records()
-    row_colors = get_row_colors(2, len(rows) + 1)
-    updates = []
-    today = datetime.today().strftime("%d-%m-%Y")
 
-    for i, row in enumerate(rows, start=2):
-        rgb = row_colors[i - 2]
-        if rgb != (255, 255, 255):
-            continue
-        if row.get("Reply Status") or row.get("Email Sent-Date"):
-            continue
-
-        name = row.get("First_Name", "").strip()
-        email_addr = row.get("Email", "").strip()
-        if not email_addr:
-            continue
-
-        expo = row.get("Show", "").strip()
-        email_html = EMAIL_TEMPLATE.replace("{%name%}", name).replace("{%expo%}", expo)
-        send_email(email_addr, "You Showed Interest in Speaking — Here's What’s Next", email_html)
-
-        updates.append({"range": f"{sheet.title}!F{i}", "values": [["Pending"]]})  # Reply Status (Column F)
-        updates.append({"range": f"{sheet.title}!E{i}", "values": [[today]]})     # Email Sent-Date (Column E)
-
-    if updates:
-        batch_update_cells(updates)
 HTML_SIGNATURE = """
 <p>If you would like to schedule a meeting with me,<br>
 please use the link below:<br>
