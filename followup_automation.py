@@ -399,20 +399,27 @@ def process_speaker_replies():
 
         for i, row in enumerate(rows, start=2):
             email_addr = row.get("Email", "").strip().lower()
-            if not email_addr or row.get("Reply Status") == "Replied":
+            if not email_addr or email_addr not in replied_emails:
                 continue
 
-            if email_addr in replied_emails:
-                # ✅ Always mark reply, even if colored
-                reply_col = "F" if sheet_name == "speakers-2" else "G"
-                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+            current_reply_status = row.get("Reply Status", "").strip()
+            rgb = row_colors[i - 2]
+            comment = replied_emails[email_addr]
 
-                # ✅ Change row color to yellow
-                color_row_for_sheet(local_sheet, i, "#FFFF00")
+            is_yellow = rgb == (255, 255, 0)
 
-                # ✅ Add reply comment to First_Name column (index 2)
-                comment = replied_emails[email_addr]
-                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+            if current_reply_status == "Replied":
+                if not is_yellow:
+                    print(f"🔁 Re-marking {email_addr} as replied with yellow highlight.")
+                    color_row_for_sheet(local_sheet, i, "#FFFF00")
+                    add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+                continue
+
+            # New reply found
+            reply_col = "F" if sheet_name == "speakers-2" else "G"
+            updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+            color_row_for_sheet(local_sheet, i, "#FFFF00")
+            add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
 
         if updates:
             batch_update_cells(updates)
@@ -420,7 +427,6 @@ def process_speaker_replies():
     # Process both sheets
     process_sheet("speakers-2")
     process_sheet("OB-speakers")
-
 
 # === Run Loop ===
 if __name__ == "__main__":
