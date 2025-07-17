@@ -352,6 +352,40 @@ def get_reply_emails():
         print(f"❌ IMAP fetch error: {e}")
     return replies
 # === Main Functions ===
+def process_speakers_emails():
+    print("📤 Processing new speaker emails...")
+    expected_headers = [
+        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
+        "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
+        "Next Followup", "Mobile", "Email", "Show"
+    ]
+    rows = sheet.get_all_records()
+    row_colors = get_row_colors(2, len(rows) + 1)
+    updates = []
+    today = datetime.today().strftime("%d-%m-%Y")
+
+    for i, row in enumerate(rows, start=2):
+        rgb = row_colors[i - 2]
+        if rgb != (255, 255, 255):
+            continue
+        if row.get("Reply Status") or row.get("Email Sent-Date"):
+            continue
+
+        name = row.get("First_Name", "").strip()
+        email_addr = row.get("Email", "").strip()
+        if not email_addr:
+            continue
+
+        expo = row.get("Show", "").strip()
+        email_html = EMAIL_TEMPLATE.replace("{%name%}", name).replace("{%expo%}", expo)
+        send_email(email_addr, "You Showed Interest in Speaking — Here's What’s Next", email_html)
+
+        updates.append({"range": f"{sheet.title}!F{i}", "values": [["Pending"]]})  # Reply Status (Column F)
+        updates.append({"range": f"{sheet.title}!E{i}", "values": [[today]]})     # Email Sent-Date (Column E)
+
+    if updates:
+        batch_update_cells(updates)
+
 def process_speaker_replies():
     print("📥 Checking speaker replies...")
     replied_emails = get_reply_emails()
@@ -368,34 +402,32 @@ def process_speaker_replies():
             if not email_addr:
                 continue
 
-            reply_col = "F" if sheet_name == "speakers-2" else "G"
-            reply_status = row.get("Reply Status", "").strip()
-            email_reply = replied_emails.get(email_addr)
+            reply_found = email_addr in replied_emails
 
-            if email_reply:
-                if reply_status != "Replied":
-                    updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
-
-                try:
-                    cell_note = local_sheet.cell(i, 3).note
-                    if cell_note:
-                        new_note = cell_note.strip() + "\n\n--- New Reply ---\n" + email_reply.strip()
-                    else:
-                        new_note = email_reply.strip()
-                    add_comment_to_cell_for_sheet(local_sheet, i, 2, new_note)
-                except Exception as e:
-                    print(f"⚠️ Couldn't fetch existing comment for row {i}: {e}")
-
-                current_rgb = row_colors[i - 2]
-                if current_rgb != (255, 255, 0):
+            # If already replied, but not yellow, fix color and comment
+            if row.get("Reply Status") == "Replied":
+                if reply_found and row_colors[i - 2] != (255, 255, 0):  # Not yellow
+                    print(f"🔧 Fixing row color and comment for {email_addr}")
                     color_row_for_sheet(local_sheet, i, "#FFFF00")
+                    comment = replied_emails[email_addr]
+                    add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+                continue
+
+            # If new reply found
+            if reply_found:
+                reply_col = "F" if sheet_name == "speakers-2" else "G"
+                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+                color_row_for_sheet(local_sheet, i, "#FFFF00")
+                comment = replied_emails[email_addr]
+                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
 
         if updates:
             batch_update_cells(updates)
 
-    # ✅ Process both sheets
+    # Process both sheets
     process_sheet("speakers-2")
     process_sheet("OB-speakers")
+
 
 # === Run Loop ===
 if __name__ == "__main__":
