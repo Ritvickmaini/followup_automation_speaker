@@ -357,51 +357,45 @@ def process_speaker_replies():
     replied_emails = get_reply_emails()
 
     def process_sheet(sheet_name):
-    print(f"🔍 Processing replies for sheet: {sheet_name}")
-    local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
-    rows = local_sheet.get_all_records()
-    row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
-    updates = []
+        print(f"🔍 Processing replies for sheet: {sheet_name}")
+        local_sheet = gc.open("Expo-Sales-Management").worksheet(sheet_name)
+        rows = local_sheet.get_all_records()
+        row_colors = get_row_colors_for_sheet(local_sheet, 2, len(rows) + 1)
+        updates = []
 
-    for i, row in enumerate(rows, start=2):
-        email_addr = row.get("Email", "").strip().lower()
-        if not email_addr:
-            continue
+        for i, row in enumerate(rows, start=2):
+            email_addr = row.get("Email", "").strip().lower()
+            if not email_addr:
+                continue
 
-        reply_col = "F" if sheet_name == "speakers-2" else "G"
-        reply_status = row.get("Reply Status", "").strip()
-        email_reply = replied_emails.get(email_addr)
+            reply_col = "F" if sheet_name == "speakers-2" else "G"
+            reply_status = row.get("Reply Status", "").strip()
+            email_reply = replied_emails.get(email_addr)
 
-        if email_reply:
-            # ✅ Mark "Replied" if not already
-            if reply_status != "Replied":
-                updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
+            if email_reply:
+                if reply_status != "Replied":
+                    updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
 
-            # ✅ Append or update comment in First_Name column (index 2)
-            try:
-                # Fetch existing comment (note)
-                cell_note = local_sheet.cell(i, 3).note  # Column 3 = C (First_Name)
-                if cell_note:
-                    new_note = cell_note.strip() + "\n\n--- New Reply ---\n" + email_reply.strip()
-                else:
-                    new_note = email_reply.strip()
-                add_comment_to_cell_for_sheet(local_sheet, i, 2, new_note)  # col_idx = 2 (0-based)
-            except Exception as e:
-                print(f"⚠️ Couldn't fetch existing comment for row {i}: {e}")
+                try:
+                    cell_note = local_sheet.cell(i, 3).note
+                    if cell_note:
+                        new_note = cell_note.strip() + "\n\n--- New Reply ---\n" + email_reply.strip()
+                    else:
+                        new_note = email_reply.strip()
+                    add_comment_to_cell_for_sheet(local_sheet, i, 2, new_note)
+                except Exception as e:
+                    print(f"⚠️ Couldn't fetch existing comment for row {i}: {e}")
 
-            # ✅ Recolor to yellow if not already yellow
-            current_rgb = row_colors[i - 2]
-            if current_rgb != (255, 255, 0):  # Not yellow
-                color_row_for_sheet(local_sheet, i, "#FFFF00")
+                current_rgb = row_colors[i - 2]
+                if current_rgb != (255, 255, 0):
+                    color_row_for_sheet(local_sheet, i, "#FFFF00")
 
-    if updates:
-        batch_update_cells(updates)
+        if updates:
+            batch_update_cells(updates)
 
     # ✅ Process both sheets
     process_sheet("speakers-2")
     process_sheet("OB-speakers")
-
-
 
 # === Run Loop ===
 if __name__ == "__main__":
