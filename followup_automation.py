@@ -409,11 +409,11 @@ def process_speaker_replies():
             is_yellow = rgb == (255, 255, 0)
 
             if current_reply_status == "Replied":
-                if not is_yellow:
-                    print(f"🔁 Re-marking {email_addr} as replied with yellow highlight.")
-                    color_row_for_sheet(local_sheet, i, "#FFFF00")
-                    add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
-                continue
+              if rgb != (255, 255, 0):  # not yellow
+                print(f"🔁 Re-marking {email_addr} as replied with yellow highlight (was {rgb}).")
+                color_row_for_sheet(local_sheet, i, "#FFFF00")
+                add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
+              continue
 
             # New reply found
             reply_col = "F" if sheet_name == "speakers-2" else "G"
