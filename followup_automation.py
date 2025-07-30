@@ -59,7 +59,7 @@ EMAIL_TEMPLATE = """
 
     <p>
       Thank you for considering this invitation. I look forward to the possibility of working with you 
-      and hope to welcome you as a valued speaker at the Bournemouth Business Expo.
+      and hope to welcome you as a valued speaker at the <strong>{%expo%}</strong>.
     </p>
 
     <p>
