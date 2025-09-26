@@ -380,8 +380,8 @@ def process_speakers_emails():
         email_html = EMAIL_TEMPLATE.replace("{%name%}", name).replace("{%expo%}", expo)
         send_email(email_addr, "You Showed Interest in Speaking — Here's What’s Next", email_html)
 
-        updates.append({"range": f"{sheet.title}!F{i}", "values": [["Pending"]]})  # Reply Status (Column F)
-        updates.append({"range": f"{sheet.title}!E{i}", "values": [[today]]})     # Email Sent-Date (Column E)
+        updates.append({"range": f"{sheet.title}!Q{i}", "values": [["Pending"]]})  # Reply Status (Column Q)
+        updates.append({"range": f"{sheet.title}!P{i}", "values": [[today]]})     # Email Sent-Date (Column P)
 
     if updates:
         batch_update_cells(updates)
@@ -416,7 +416,7 @@ def process_speaker_replies():
               continue
 
             # New reply found
-            reply_col = "F" if sheet_name == "speakers-2" else "G"
+            reply_col = "Q" if sheet_name == "speakers-2" else "G"
             updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
             color_row_for_sheet(local_sheet, i, "#FFFF00")
             add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
