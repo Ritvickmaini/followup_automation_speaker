@@ -355,7 +355,7 @@ def get_reply_emails():
 def process_speakers_emails():
     print("📤 Processing new speaker emails...")
     expected_headers = [
-        "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
+        "Assigned To", "Date", "Lead Source", "First_Name", "Last Name", "Email Sent-Date", "Reply Status",
         "Company Name", "Designation", "Interested for Exhibitor / Speaker", "Comments",
         "Next Followup", "Mobile", "Email", "Show"
     ]
@@ -380,8 +380,8 @@ def process_speakers_emails():
         email_html = EMAIL_TEMPLATE.replace("{%name%}", name).replace("{%expo%}", expo)
         send_email(email_addr, "You Showed Interest in Speaking — Here's What’s Next", email_html)
 
-        updates.append({"range": f"{sheet.title}!S{i}", "values": [["Pending"]]})  # Reply Status (Column S)
-        updates.append({"range": f"{sheet.title}!R{i}", "values": [[today]]})     # Email Sent-Date (Column R)
+        updates.append({"range": f"{sheet.title}!T{i}", "values": [["Pending"]]})  # Reply Status (Column T)
+        updates.append({"range": f"{sheet.title}!S{i}", "values": [[today]]})     # Email Sent-Date (Column S)
 
     if updates:
         batch_update_cells(updates)
@@ -416,7 +416,7 @@ def process_speaker_replies():
               continue
 
             # New reply found
-            reply_col = "S" if sheet_name == "speakers-2" else "G"
+            reply_col = "T" if sheet_name == "speakers-2" else "G"
             updates.append({"range": f"{sheet_name}!{reply_col}{i}", "values": [["Replied"]]})
             color_row_for_sheet(local_sheet, i, "#FFFF00")
             add_comment_to_cell_for_sheet(local_sheet, i, 2, comment)
