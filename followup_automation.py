@@ -371,12 +371,12 @@ def process_speakers_emails():
         if row.get("Reply Status") or row.get("Email Sent-Date"):
             continue
 
-        name = row.get("First_Name", "").strip()
-        email_addr = row.get("Email", "").strip()
+        name = str(row.get("First_Name", "")).strip()
+        email_addr = str(row.get("Email", "")).strip()
         if not email_addr:
             continue
 
-        expo = row.get("Show", "").strip()
+        expo = str(row.get("Show", "")).strip()
         email_html = EMAIL_TEMPLATE.replace("{%name%}", name).replace("{%expo%}", expo)
         send_email(email_addr, "You Showed Interest in Speaking — Here's What’s Next", email_html)
 
@@ -398,11 +398,11 @@ def process_speaker_replies():
         updates = []
 
         for i, row in enumerate(rows, start=2):
-            email_addr = row.get("Email", "").strip().lower()
+            email_addr = str(row.get("Email", "")).strip().lower()
             if not email_addr or email_addr not in replied_emails:
                 continue
 
-            current_reply_status = row.get("Reply Status", "").strip()
+            current_reply_status = str(row.get("Reply Status", "")).strip()
             rgb = row_colors[i - 2]
             comment = replied_emails[email_addr]
 
